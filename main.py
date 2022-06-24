@@ -18,7 +18,7 @@ def set_all_seeds(seed):
 
 #training 
 SEED = 672
-NUM_EPISODES = 400
+NUM_EPISODES = 1000
 set_all_seeds(SEED)
 save_path = "C:/Users/Benjamin/Documents/Python/Trinity_Research/Reinforcement_Experimentation/Modular_VD/MVD_Models"
 save_name = 'test_1'
@@ -55,7 +55,7 @@ while episode_count < NUM_EPISODES:
 
 model.save(save_path,save_name)'''
 
-RUNS = 3
+RUNS = 10
 env = Switch(num_agents=2)
 state_dim = env.state_dim
 action_dim = env.action_dim
