@@ -1,0 +1,8 @@
+#clone the ma-gym repository from https://github.com/koulanurag/ma-gym.git
+numpy
+torch
+pyvirtualdisplay
+tqdm
+matplotlib
+gym
+IPython
