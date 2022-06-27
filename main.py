@@ -16,11 +16,11 @@ def set_all_seeds(seed):
   torch.backends.cudnn.deterministic = True
 
 
-#training 
+#training
 SEED = 672
 NUM_EPISODES = 1000
 set_all_seeds(SEED)
-save_path = "C:/Users/Benjamin/Documents/Python/Trinity_Research/Reinforcement_Experimentation/Modular_VD/MVD_Models"
+save_path = "C:/Users/Benjamin/Documents/Python/Trinity_Research/Reinforcement_Experimentation/Github Repositories/Modular_VD/Saved Models"
 save_name = 'test_1'
 
 '''I couldn't get this working on my local machine and the recording functionality doesn't work unless this does'''
@@ -60,13 +60,15 @@ env = Switch(num_agents=2)
 state_dim = env.state_dim
 action_dim = env.action_dim
 
-train_log, train_reward_log, test_reward_log, agents, separated_agents = Util.run_experiments(Switch,
+train_log, train_reward_log, test_reward_log= Util.run_experiments(Switch,
                                                                {'num_agents':2,'vid':False},
                                                                CentralisedAgents,
                                                                [hyp, state_dim, action_dim, 2],
                                                                n_episodes=NUM_EPISODES,
                                                                runs=RUNS,
-                                                               verbose=True)
+                                                               verbose=True,
+                                                               save_path=save_path)
 
 Util.plot_experiments(train_log, train_reward_log, test_reward_log, RUNS)
+
 

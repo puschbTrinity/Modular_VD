@@ -4,13 +4,16 @@ nn = torch.nn
 F = torch.nn.functional
 optim = torch.optim
 
+
 class EpisodeBuffer:
     def __init__(self):
         self.transitions = []
 
+
     def put(self, transition):
         self.transitions.append(transition)
 
+    
     def sample(self, lookup_step=None, idx=None):
         tr = self.transitions
         if idx is not None: tr = tr[idx:idx + lookup_step]
@@ -107,6 +110,10 @@ class DuelingLSTMCritic(nn.Module):
         ''' episilon greedy, for all agents, the agent dimension is 0 in obs '''
         output, hc = self(obs, hc)
         best = output.argmax(-1).detach().squeeze()
+
+        #in the case of one agent using signle agent gym environments
+        best = best.unsqueeze(-1) if best.shape == torch.tensor(0).shape else best
+
         if not exploration: return best.tolist(), hc
         A = obs.size(0)
         mask = (torch.rand(A) < epsilon).long()

@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import numpy as np
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 class Util:
     @staticmethod
@@ -13,7 +14,7 @@ class Util:
 
 
         if not save_path == None:
-            save_path += "/{}".format(datetime.now())
+            save_path += "/{}".format(str(datetime.now()).replace(' ','_').replace(':','-'))
 
         pbar = tqdm(range(runs))
         for count, i in enumerate(pbar):
@@ -50,7 +51,7 @@ class Util:
         return train_log, train_reward_log, test_reward_log
 
     @staticmethod
-    def plot_experiments(self, train_log, train_reward_log, test_reward_log, runs):
+    def plot_experiments(train_log, train_reward_log, test_reward_log, runs):
         ####################################### TRAINING #######################################
         fig = plt.figure(figsize=(9, 7))
         ax = fig.add_subplot(111)

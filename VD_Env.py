@@ -23,13 +23,49 @@ class Switch:
         self.action_dim = 5
 
     def reset(self):
-        return self.conv_state(self.env.reset())
+        temp = self.conv_state(self.env.reset())
+        return temp
 
     def step(self, a):
         obs_n, reward_n, done_n, info = self.env.step(a)
         self.t += self.dt
         if np.all(done_n): self.t = 0  #  switch has a max of 100 steps
-        return self.conv_state(obs_n), reward_n, done_n, info
+        temp = self.conv_state(obs_n)
+        return temp, reward_n, done_n, info
+
+class Env_wrapper_VD:
+    ''' wrapper that lets gym environment use the run experiment function '''
+
+    def __init__(self, env_name, vid=False, num_agents = 1):
+        self.env = Universal_Env_Utility.wrap_env(gym.make(env_name)) if vid else gym.make(env_name)
+        self.t, self.dt = 0, 1  # 0.01
+        self.render, self.close = self.env.render, self.env.close
+        # self.conv_state = lambda obs: [o+[self.t] for o in obs]
+        self.num_agents = num_agents
+        self.ts = np.linspace(0, np.pi, 30)
+
+        self.conv_state = lambda obs: [o + np.cos(self.t * self.ts).tolist() for o in obs]
+
+        self.state_dim = len(self.ts) + self.env.observation_space.shape[0]
+        self.action_dim = self.env.action_space.n
+
+    def reset(self):
+        #jank - check what type it is instead
+        temp = self.conv_state([self.env.reset().tolist()] if self.num_agents < 2 else self.env.reset())
+        return temp
+
+    def step(self, a):
+        if len(a) == 1:
+            a = a[0]
+        obs_n, reward_n, done_n, info = self.env.step(a)
+        if self.num_agents < 2:
+            obs_n = [obs_n.tolist()]
+            reward_n = [reward_n]
+            done_n = [done_n]
+        self.t += self.dt
+        if np.all(done_n): self.t = 0  #  switch has a max of 100 steps
+        temp = self.conv_state(obs_n)
+        return temp, reward_n, done_n, info
 
 
 class Universal_Env_Utility:
