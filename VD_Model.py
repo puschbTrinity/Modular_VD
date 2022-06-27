@@ -1,3 +1,5 @@
+'''this file contains all the code for the VD model'''
+
 import  collections, random, numpy as np, torch
 import os
 nn = torch.nn
@@ -5,15 +7,16 @@ F = torch.nn.functional
 optim = torch.optim
 
 
+'''buffer class for LSTM that stores experiences over an episode'''
 class EpisodeBuffer:
     def __init__(self):
         self.transitions = []
 
-
+    '''stores an experience in the episode buffer'''
     def put(self, transition):
         self.transitions.append(transition)
 
-    
+    '''samples experiences from the episode buffer'''
     def sample(self, lookup_step=None, idx=None):
         tr = self.transitions
         if idx is not None: tr = tr[idx:idx + lookup_step]
@@ -22,7 +25,7 @@ class EpisodeBuffer:
     def __len__(self):
         return len(self.transitions)
 
-
+'''experience replay class for MVD agent'''
 class EpisodeMemory():
     def __init__(self, n_agents, batch_sample=False, max_epi_num=100, max_epi_len=500,
                  batch_size=1, lookup_step=None):
@@ -34,9 +37,11 @@ class EpisodeMemory():
         self.memory = collections.deque(maxlen=self.max_epi_num)
         self.sample = self.batch_sample if batch_sample else self.sequential_sample
 
+    '''adds an episode of experience to the experience replay object'''
     def put(self, episode):
         self.memory.append(episode)
 
+    '''reshaping sampled experiences'''
     def convert(self, sample, T, device):
         # sample:  [B, (o,a,r,n,d), T, A, values] >>> (o,a,r,n,d) [A,B,T,I]
 
@@ -50,12 +55,14 @@ class EpisodeMemory():
 
         return o, a, r, n, d
 
+    '''performs a sequential sample on the experience replay memory'''
     def sequential_sample(self, device):
         # Benefit: Whole episode update. Downside: batch-size = 1
         idx = np.random.randint(0, len(self.memory))
         episode = self.memory[idx].sample()
         return self.convert([episode], len(episode), device)
 
+    '''performs a batch sample on the experience replay memory'''
     def batch_sample(self, device):
         # Cuts off episode lengths to the minimum length / look-ahead step
         sampled_episodes = random.sample(self.memory, self.batch_size)
@@ -75,7 +82,7 @@ class EpisodeMemory():
     def __len__(self):
         return len(self.memory)
 
-
+'''VD network'''
 class DuelingLSTMCritic(nn.Module):
     def __init__(self, state_dim, action_dim, h=32):
         super().__init__()
@@ -106,6 +113,7 @@ class DuelingLSTMCritic(nn.Module):
         q = v + a
         return q if b else (q, hc)  # dim = action dim (i.e. it computes Q(S, A) for all A) 
 
+    '''returns the actions as dictated by the model's current learned policy'''
     def sample_action(self, obs, hc, epsilon, exploration):
         ''' episilon greedy, for all agents, the agent dimension is 0 in obs '''
         output, hc = self(obs, hc)
@@ -124,6 +132,7 @@ class DuelingLSTMCritic(nn.Module):
         # ac = mask * rndm + (1-mask) * best
         # return ac.tolist(), hc
 
+    '''initializes the hidden state of the model'''
     def init_hidden_state(self, batch_size=1, training=False):
         if training is True:
             return torch.zeros([1, batch_size, self.h_dim]).to(self.device), torch.zeros(
@@ -153,6 +162,7 @@ class SingleAgent:
         self.hcs = self.critic.init_hidden_state(training=False)
 
 
+'''multi VD agent'''
 class CentralisedAgents:
     '''
     Vectorisation TODO:
@@ -187,16 +197,20 @@ class CentralisedAgents:
 
         self.new_episode()
 
+    '''saves the model's parameters in a specified location'''
     def save(self, path,name):
         if not os.path.exists(path):
             os.makedirs(path)
         torch.save(self.critic.state_dict(),"{}/{}".format(path,name))
+
+    '''loads the model's parameters into the CentralisedAgent object from a specified location'''
     def load(self,path):
         self.critic.load_state_dict(torch.load(path))
         self.critic_target.load_state_dict(self.critic.state_dict())
         self.critic.to(self.critic.device)
         self.critic_target.to(self.critic.device)
 
+    '''returns the individual agents present in multi agent network'''
     def get_agents(self):
         agents = []
         for i in self.ag_ixs:
@@ -205,12 +219,14 @@ class CentralisedAgents:
             agents.append(SingleAgent(c, self.roles[i]))
         return agents
 
+    '''returns the actions as dictated by the model's current learned policy'''
     def act(self, obs, exploration=True):
         obs = torch.FloatTensor(obs).unsqueeze(1).to(self.critic.device)
         o = torch.cat((self.roles[:, 0], obs), dim=-1)
         a, self.hcs = self.critic.sample_action(o, self.hcs, self.epsilon, exploration)
         return a
 
+    '''updates params of the model'''
     def update(self, obs, a, r, obs_prime, done):
         self.t += 1
         done_mask = [float(not d) for d in done]
@@ -227,11 +243,13 @@ class CentralisedAgents:
             self.episode_memory.put(self.episode_record)
             self.new_episode()
 
+    '''resets episode buffer, anneals exploration rate, and intializes the hidden state'''
     def new_episode(self):
         self.epsilon = max(self.hyp.eps_end, self.epsilon * self.hyp.eps_decay)  # Linear annealing
         self.episode_record = EpisodeBuffer()
         self.hcs = self.critic.init_hidden_state(self.n_agents, True)
 
+    '''updates model params'''
     def optimize(self):
         # Get batch from replay buffer
         (o_s, a_s, r_s, n_o_s, dones) = self.episode_memory.sample(self.critic.device)
@@ -255,6 +273,7 @@ class CentralisedAgents:
         self.optimiser.step()
 
     #modified version of rollout_centralised from original colab
+    '''training/eval loop that returns the reward as a metric'''
     def run(self,env, train=True, exploration=True, max_episode=30000, log_episode_interval=5, verbose=False):
 
         history_reward = []
@@ -295,7 +314,7 @@ class CentralisedAgents:
                         print('Episodes {}, Reward {}'.format(episode_count, episodes_mean_reward))
         return recorded_episodes, recorded_episode_reward
 
-
+'''object to store all the hyperparamters for the VD model'''
 class VDMCMA_Hyperparams():
     def __init__(self, batch_size=16,
                  gamma=0.99,

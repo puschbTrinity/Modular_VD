@@ -1,9 +1,14 @@
+'''this file provides useful methods to train a VD_agent'''
+
+
 from tqdm import tqdm
 import numpy as np
 from datetime import datetime
 import matplotlib.pyplot as plt
 
 class Util:
+    '''trains n VD models on a given environment
+    -future idea --> make this more modular by making the run function an input and then this class can be used by any RL agent and environment'''
     @staticmethod
     def run_experiments(Envir, EnvArgs, Agent, Hyp_,
                         n_episodes=1000, runs=10, log_interval=10, verbose=False, save_path = None):
@@ -50,6 +55,7 @@ class Util:
             pbar.set_description('r train: %.4f, r test: %.5f' % (train_reward[-1], test_reward_log[-1]))
         return train_log, train_reward_log, test_reward_log
 
+    '''plots training metrics'''
     @staticmethod
     def plot_experiments(train_log, train_reward_log, test_reward_log, runs):
         ####################################### TRAINING #######################################

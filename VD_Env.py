@@ -1,3 +1,5 @@
+'''this file contains all the code for the environments to be used with the VD model'''
+
 import gym, glob, io, base64
 from ma_gym.wrappers import Monitor
 from IPython.display import HTML
@@ -5,7 +7,7 @@ from IPython import display as ipythondisplay
 import numpy as np
 
 
-
+'''switch environment (as described in the paper: https://arxiv.org/pdf/1706.05296.pdf) wrapper class'''
 class Switch:
     ''' wrapper to encode the time in the state '''
 
@@ -50,7 +52,7 @@ class Env_wrapper_VD:
         self.action_dim = self.env.action_space.n
 
     def reset(self):
-        #jank - check what type it is instead
+        #maybe alter the method for determining what kind of environment was inputted to a data type approach rather than using the number of agents
         temp = self.conv_state([self.env.reset().tolist()] if self.num_agents < 2 else self.env.reset())
         return temp
 
@@ -67,8 +69,11 @@ class Env_wrapper_VD:
         temp = self.conv_state(obs_n)
         return temp, reward_n, done_n, info
 
-
+'''class taht provides usefull methods for VD environments
+    ------------not working yet--------------'''
 class Universal_Env_Utility:
+
+    '''records a video of the agent interacting with the environment'''
     @staticmethod
     def record_ep(agents, env, maxT=100):
 
@@ -97,6 +102,7 @@ class Universal_Env_Utility:
             if np.all(done_n): break
         env.close()
         show_video()
+    '''wraps the environment to allow recording'''
     @staticmethod
     def wrap_env(env):
         env = Monitor(env, './video', force=True)
